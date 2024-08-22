@@ -1,6 +1,7 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Configuration;
 
 namespace FinalProjectC_
 {
@@ -121,6 +122,55 @@ namespace FinalProjectC_
             Environment.Exit(0);
         }
 
+        public class LoginRepository
+        {
+            private static LoginRepository _instance;
+            private Dictionary<string, string> _loginsAndPasswords;
+
+            private LoginRepository()
+            {
+                _loginsAndPasswords = new Dictionary<string, string>();
+                ReadLoginsAndPasswordsFromFile();
+            }
+
+            public static LoginRepository Instance
+            {
+                get { return _instance ?? (_instance = new LoginRepository()); }
+            }
+
+            public bool IsValidLogin(string login, string password)
+            {
+                return _loginsAndPasswords.ContainsKey(login) && _loginsAndPasswords[login] == password;
+            }
+
+            private void ReadLoginsAndPasswordsFromFile()
+            {
+                string filePath = ConfigurationManager.AppSettings["LoginsAndPasswordsFilePath"];
+                if (string.IsNullOrEmpty(filePath))
+                {
+                    throw new Exception("File path not configured.");
+                }
+
+                if (!File.Exists(filePath))
+                {
+                    throw new FileNotFoundException("The specified file was not found.", filePath);
+                }
+
+                string[] lines = File.ReadAllLines(filePath);
+                foreach (string line in lines)
+                {
+                    string[] parts = line.Split(':');
+                    if (parts.Length == 2)
+                    {
+                        _loginsAndPasswords.Add(parts[0], parts[1]);
+                    }
+                    else
+                    {
+                        throw new FormatException("The file format is incorrect.");
+                    }
+                }
+            }
+        }
 
         private void Login()
         {
@@ -256,80 +306,123 @@ namespace FinalProjectC_
             }
         }
 
-        private void CreateNewQuiz()
-        {
-            Console.WriteLine("Create a new quiz:");
-            Console.Write("Enter quiz title: ");
-            string title = Console.ReadLine();
-
-            var quiz = new Quiz { Title = title, Questions = new List<Question>() };
-
-            while (true)
-            {
-                Console.WriteLine("Add a new question:");
-                Console.Write("Enter question text: ");
-                string questionText = Console.ReadLine();
-
-                var question = new Question { Text = questionText, Options = new List<string>(), CorrectAnswers = new List<int>() };
-
-                Console.Write("Enter options (separated by commas): ");
-                string options = Console.ReadLine();
-                question.Options = options.Split(',').Select(o => o.Trim()).ToList();
-
-                Console.Write("Enter correct answer(s) (separated by commas): ");
-                string correctAnswers = Console.ReadLine();
-                question.CorrectAnswers = correctAnswers.Split(',').Select(int.Parse).ToList();
-
-                quiz.Questions.Add(question);
-
-                Console.WriteLine("Add another question? (y/n)");
-                string response = Console.ReadLine();
-                if (response.ToLower() != "y")
-                    break;
-            }
-
-            quizzes.Add(quiz);
-            Console.WriteLine("Quiz created successfully!");
-        }
+        private string adminLogin = "admin";
+        private string adminPassword = "01082008";
 
         private void EditQuiz()
         {
-            Console.WriteLine("Select a quiz to edit:");
-            for (int i = 0; i < quizzes.Count; i++)
+            Console.Write("Enter admin login: ");
+            string login = Console.ReadLine();
+            Console.Write("Enter admin password: ");
+            string password = Console.ReadLine();
+
+            if (login == adminLogin && password == adminPassword)
             {
-                Console.WriteLine($"{i + 1}. {quizzes[i].Title}");
-            }
-
-            int quizIndex = int.Parse(Console.ReadLine()) - 1;
-            var quiz = quizzes[quizIndex];
-
-            while (true)
-            {
-                Console.WriteLine("Edit quiz options:");
-                Console.WriteLine("1. Add a new question");
-                Console.WriteLine("2. Edit an existing question");
-                Console.WriteLine("3. Delete a question");
-                Console.WriteLine("4. Save changes and exit");
-
-                int choice = int.Parse(Console.ReadLine());
-
-                switch (choice)
+                Console.WriteLine("Select a quiz to edit:");
+                for (int i = 0; i < quizzes.Count; i++)
                 {
-                    case 1:
-                        AddNewQuestion(quiz);
+                    Console.WriteLine($"{i + 1}. {quizzes[i].Title}");
+                }
+
+                int quizIndex;
+                while (true)
+                {
+                    if (int.TryParse(Console.ReadLine(), out quizIndex) && quizIndex >= 1 && quizIndex <= quizzes.Count)
+                    {
                         break;
-                    case 2:
-                        EditExistingQuestion(quiz);
-                        break;
-                    case 3:
-                        DeleteQuestion(quiz);
-                        break;
-                    case 4:
-                        return;
-                    default:
-                        Console.WriteLine("Invalid choice. Try again.");
+                    }
+                    Console.WriteLine("Invalid choice. Please enter a number between 1 and " + quizzes.Count + ":");
+                }
+
+                quizIndex -= 1; 
+                var quiz = quizzes[quizIndex];
+
+                while (true)
+                {
+                    Console.WriteLine("Edit quiz options:");
+                    Console.WriteLine("1. Add a new question");
+                    Console.WriteLine("2. Edit an existing question");
+                    Console.WriteLine("3. Delete a question");
+                    Console.WriteLine("4. Save changes and exit");
+
+                    int choice = int.Parse(Console.ReadLine());
+
+                    switch (choice)
+                    {
+                        case 1:
+                            AddNewQuestion(quiz);
+                            break;
+                        case 2:
+                            EditExistingQuestion(quiz);
+                            break;
+                        case 3:
+                            DeleteQuestion(quiz);
+                            break;
+                        case 4:
+                            Console.WriteLine("Changes saved successfully!");
+                            ShowMainMenu();
+                            return;
+                        default:
+                            Console.WriteLine("Invalid choice. Try again.");
+                            break;
+                    }
+                }
+            }
+            else
+            {
+                Console.WriteLine("Invalid admin credentials.");
+                ShowMainMenu();
+            }
+        }
+
+        private void CreateNewQuiz()
+        {
+            Console.Write("Enter admin login: ");
+            string login = Console.ReadLine();
+            Console.Write("Enter admin password: ");
+            string password = Console.ReadLine();
+
+            if (login == adminLogin && password == adminPassword)
+            {
+                Console.WriteLine("Create a new quiz:");
+                Console.Write("Enter quiz title: ");
+                string title = Console.ReadLine();
+
+                var quiz = new Quiz { Title = title, Questions = new List<Question>() };
+
+                while (true)
+                {
+                    Console.WriteLine("Add a new question:");
+                    Console.Write("Enter question text: ");
+                    string questionText = Console.ReadLine();
+
+                    var question = new Question { Text = questionText, Options = new List<string>(), CorrectAnswers = new List<int>() };
+
+                    Console.Write("Enter options (separated by commas): ");
+                    string options = Console.ReadLine();
+                    question.Options = options.Split(',').Select(o => o.Trim()).ToList();
+
+                    Console.Write("Enter correct answer(s) (separated by commas): ");
+                    string correctAnswers = Console.ReadLine();
+                    question.CorrectAnswers = correctAnswers.Split(',').Select(int.Parse).ToList();
+
+                    quiz.Questions.Add(question);
+
+                    Console.WriteLine("Add another question? (y/n)");
+                    string response = Console.ReadLine();
+                    if (response.ToLower() != "y")
                         break;
                 }
+
+                quizzes.Add(quiz);
+                Console.WriteLine("Quiz created successfully!");
+
+                ShowMainMenu();
+            }
+            else
+            {
+                Console.WriteLine("Invalid admin credentials.");
+                ShowMainMenu();
             }
         }
 
@@ -424,35 +517,35 @@ namespace FinalProjectC_
         }
         private void StartNewQuiz()
         {
-            Console.WriteLine("Choose a quiz category:");
-            Console.WriteLine("1. Geography");
-            Console.WriteLine("2. History");
-            Console.WriteLine("3. Biology");
-            Console.WriteLine("4. Mixed Quiz (random questions from all categories)");
-            int choice = int.Parse(Console.ReadLine());
+            Console.WriteLine("Choose a quiz:");
+            for (int i = 0; i < quizzes.Count; i++)
+            {
+                Console.WriteLine($"{i + 1}. {quizzes[i].Title}");
+            }
+            Console.WriteLine($"{quizzes.Count + 1}. Mixed Quiz (random questions from all quizzes)");
+
+            int quizIndex;
+            while (true)
+            {
+                if (int.TryParse(Console.ReadLine(), out quizIndex) && quizIndex >= 1 && quizIndex <= quizzes.Count + 1)
+                {
+                    break;
+                }
+                Console.WriteLine("Invalid choice. Please enter a number between 1 and " + (quizzes.Count + 1) + ":");
+            }
 
             Quiz selectedQuiz;
-            switch (choice)
+            if (quizIndex == quizzes.Count + 1)
             {
-                case 1:
-                    selectedQuiz = quizzes[0]; 
-                    break;
-                case 2:
-                    selectedQuiz = quizzes[1]; 
-                    break;
-                case 3:
-                    selectedQuiz = quizzes[2]; 
-                    break;
-                case 4:
-                    selectedQuiz = new Quiz { Title = "Mixed Quiz" };
-                    var allQuestions = quizzes.SelectMany(q => q.Questions).ToList();
-                    ShuffleQuestions(allQuestions);
-                    selectedQuiz.Questions = allQuestions.Take(20).ToList();
-                    break;
-                default:
-                    Console.WriteLine("Invalid choice. Please try again.");
-                    StartNewQuiz();
-                    return;
+                selectedQuiz = new Quiz { Title = "Mixed Quiz" };
+                var allQuestions = quizzes.SelectMany(q => q.Questions).ToList();
+                ShuffleQuestions(allQuestions);
+                selectedQuiz.Questions = allQuestions.Take(20).ToList();
+            }
+            else
+            {
+                quizIndex -= 1; 
+                selectedQuiz = quizzes[quizIndex];
             }
 
             int correctAnswers = 0;
